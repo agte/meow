@@ -1,0 +1,32 @@
+version: '3.7'
+services:
+  app:
+    container_name: test-meow-app
+    build:
+      context: ./
+      dockerfile: test.Dockerfile
+      args:
+      - NODE_ENV=test
+    command: ['npm', 'test']
+    environment:
+      - NODE_ENV=test
+      - test_mongo__host=mongo
+    volumes:
+      - ./index.js:/app/index.js
+      - ./src:/app/src
+      - ./package.json:/app/package.json
+      - ./.taprc:/app/.taprc
+    depends_on:
+      - mongo
+
+  mongo:
+    container_name: test-meow-mongo
+    image: 'bitnami/mongodb:6.0'
+    environment:
+      - MONGODB_ROOT_USER=root
+      - MONGODB_ROOT_PASSWORD=qwerty
+      - MONGODB_DATABASE=test
+      - MONGODB_USERNAME=test
+      - MONGODB_PASSWORD=qwerty
+    logging:
+      driver: none

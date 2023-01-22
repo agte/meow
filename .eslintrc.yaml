@@ -28,5 +28,5 @@ rules:
     - allow:
       - _id
       - __dirname
-  no-continue:
-    - off
+  no-continue: off
+  import/no-relative-packages: off

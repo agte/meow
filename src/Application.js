@@ -13,9 +13,9 @@ import { MongoClient } from 'mongodb';
 import cron from 'node-cron';
 
 import Configuration from './Configuration.js';
-// import socketIoApi from './socketIoApi.js';
-// import APIErrorSchema from './schemas/APIError.js';
-// import ObjectIdSchema from './schemas/ObjectId.js';
+import socketIoApi from './socketIoApi.js';
+import APIErrorSchema from './schemas/APIError.js';
+import ObjectIdSchema from './schemas/ObjectId.js';
 
 export default class Application extends EventEmitter {
   name;
@@ -65,6 +65,9 @@ export default class Application extends EventEmitter {
    */
   appLogger = null;
 
+  /* @type {string} */
+  status = 'created';
+
   /**
    * {@link https://github.com/mongodb/node-mongodb-native/blob/main/src/mongo_client.ts#L101}
    * @type {MongoClient}
@@ -80,18 +83,21 @@ export default class Application extends EventEmitter {
   #swaggerConfig;
 
   /**
+   * @param {string} dirPath
    * @param {Object} runtimeConfig
    */
-  constructor(runtimeConfig) {
+  constructor(dirPath, runtimeConfig = {}) {
     super();
-    this.dirPath = this.constructor.dirPath;
+    this.dirPath = dirPath;
 
     const packagePath = path.resolve(this.dirPath, './package.json');
     this.metadata = JSON.parse(fs.readFileSync(packagePath, { encoding: 'utf8' }));
+    this.name = this.metadata.name;
 
-    this.config = new Configuration(runtimeConfig, {
+    this.config = new Configuration(path.resolve(this.dirPath, 'config'), {
       appName: this.name,
-      dirPath: path.resolve(this.dirPath, './config'),
+      mode: 'web',
+      ...runtimeConfig,
     });
 
     this.#swaggerConfig = {
@@ -124,12 +130,19 @@ export default class Application extends EventEmitter {
   }
 
   async init() {
+    if (this.status !== 'created' && this.status !== 'stopped') {
+      this.appLogger.error('Попытка запустить уже запущенное приложение');
+      return;
+    }
+
+    this.status = 'launching';
+
     await this.config.init();
     this.#initLogger();
-    await this.#initMongo();
-
+    if (this.config.mongo) {
+      await this.#initMongo();
+    }
     await this.initDependencies();
-
     await this.#loadModels();
     await this.#loadServices();
 
@@ -157,9 +170,15 @@ export default class Application extends EventEmitter {
     this.appLogger.always(
       `Приложение ${this.name} запущено в режиме ${this.config.mode} в окружении ${this.config.environment}`,
     );
+
+    this.status = 'active';
   }
 
   async destroy() {
+    if (this.status === 'created' || this.status === 'stopped') {
+      return;
+    }
+
     if (this.cron) {
       this.cron.getTasks().forEach((task) => task.stop());
     }
@@ -171,12 +190,22 @@ export default class Application extends EventEmitter {
       this.server.io.close();
     }
 
-    await this.#mongoClient.close();
+    if (this.#mongoClient) {
+      await this.#mongoClient.close();
+    }
 
     await this.destroyDependencies();
 
     this.appLogger.always('Приложение остановлено');
   }
+
+  /* eslint-disable class-methods-use-this, no-empty-function */
+  async initDependencies() {
+  }
+
+  async destroyDependencies() {
+  }
+  /* eslint-enable class-methods-use-this, no-empty-function */
 
   static dirPath = '';
 

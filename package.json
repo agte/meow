@@ -5,7 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "tap",
+    "test": "NODE_ENV=test tap",
+    "docker-test": "docker-compose -f docker-compose.test.yml -p test-meow-app up --abort-on-container-exit",
     "lint": "eslint ."
   },
   "repository": {
@@ -29,10 +30,12 @@
     "@fastify/static": "^6.6.0",
     "@fastify/swagger": "^8.2.1",
     "fastify": "^4.11.0",
+    "fastify-plugin": "^4.5.0",
     "mongodb": "^4.13.0",
     "node-cron": "^3.0.2",
     "pino": "^8.8.0",
-    "rc": "^1.2.8"
+    "rc": "^1.2.8",
+    "socket.io": "^4.5.4"
   },
   "devDependencies": {
     "eslint": "^8.31.0",

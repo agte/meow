@@ -1,4 +1,4 @@
-reporter: spec
+# reporter: spec
 bail: true
 files:
 - 'src/test.js'
