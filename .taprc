@@ -1,0 +1,6 @@
+reporter: spec
+bail: true
+files:
+- 'src/test.js'
+strict: true
+coverage: false # Не работает с ESM
